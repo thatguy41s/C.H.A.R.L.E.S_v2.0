@@ -3,7 +3,8 @@
   functions = "netlify/functions"
 
 [functions]
-  node_bundle = true
+  # This tells Netlify to use the modern bundler without the invalid 'true' syntax
+  node_bundler = "esbuild"
 
 [[edge_functions]]
   path = "/.netlify/functions/*"
