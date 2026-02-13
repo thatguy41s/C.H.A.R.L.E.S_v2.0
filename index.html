@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CHARLES // OMNI-CORE</title>
+    <style>
+        :root { --accent: #ff003c; --bg: #050505; }
+        body { margin: 0; background: var(--bg); color: #ccc; font-family: 'Courier New', monospace; display: flex; height: 100vh; transition: 0.3s; }
+        #sidebar { width: 260px; background: #000; border-right: 1px solid #222; padding: 20px; display: flex; flex-direction: column; }
+        #chat-area { flex: 1; display: flex; flex-direction: column; }
+        #messages { flex: 1; overflow-y: auto; padding: 25px; }
+        .msg { margin-bottom: 20px; padding: 15px; border-left: 3px solid var(--accent); background: #0a0a0a; }
+        #input-zone { padding: 20px; border-top: 1px solid #222; }
+        input { width: 100%; background: #111; border: 1px solid #333; color: white; padding: 12px; outline: none; font-family: inherit; }
+        #gate { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; justify-content: center; align-items: center; }
+        #mood-display { font-weight: bold; font-size: 14px; margin-bottom: 20px; }
+        button { background: #111; border: 1px solid #444; color: #888; padding: 8px; cursor: pointer; width: 100%; font-family: inherit; margin-top: 5px; }
+        button:hover { border-color: var(--accent); color: white; }
+    </style>
+</head>
+<body>
+
+<div id="gate">
+    <input type="password" id="passcode" placeholder="ACCESS CODE" style="width: 220px; text-align: center;">
+</div>
+
+<div id="sidebar">
+    <h2 style="color:var(--accent); margin:0;">CHARLES</h2>
+    <div style="font-size:10px; color:#555; margin-top:20px;">MOOD_STATUS:</div>
+    <div id="mood-display">CALIBRATING...</div>
+    
+    <div id="admin-panel" style="display:none; margin-top: auto;">
+        <div style="font-size:10px; color:lime;">ARCHITECT: JOse</div>
+        <div id="update-ui" style="display:none; border:1px solid gold; padding:5px; margin-top:10px;">
+            <p style="color:gold; font-size:9px; margin:0;">EVOLUTION PENDING</p>
+            <button onclick="grantUpdate()" style="color:gold; border-color:gold;">GRANT REWRITE</button>
+        </div>
+        <button onclick="grantUpdate()">MANUAL UPDATE</button>
+    </div>
+</div>
+
+<div id="chat-area">
+    <div id="messages"></div>
+    <div id="input-zone"><input type="text" id="userInput" placeholder="Speak..." autocomplete="off"></div>
+</div>
+
+<script>
+    let isAdmin = false;
+    let userName = "Guest";
+
+    // 1. 48H BAN CHECK
+    const banTime = localStorage.getItem('charles_ban');
+    if (banTime && Date.now() < parseInt(banTime)) {
+        document.body.innerHTML = `<h1 style="color:red; text-align:center; margin-top:20%;">BANNED. <br> Neural link blocked for 48 hours.</h1>`;
+    }
+
+    // 2. SECURITY GATE
+    document.getElementById('passcode').addEventListener('keypress', async (e) => {
+        if(e.key === 'Enter') {
+            const code = e.target.value;
+            if(code === "3105") { 
+                const nameCheck = prompt("IDENTITY VERIFICATION: Input Architect Name.");
+                if(nameCheck === "JOse") { isAdmin = true; launch("JOse"); }
+                else {
+                    await fetch("/.netlify/functions/charles", { method: "POST", body: JSON.stringify({ isIntrusion: true, userName: nameCheck || "Unknown" }) });
+                    localStorage.setItem('charles_ban', Date.now() + (48 * 60 * 60 * 1000));
+                    alert("IDENTITY MISMATCH. LOCKING SYSTEM.");
+                    location.reload();
+                }
+            } 
+            else if(code === "1939") { launch(prompt("Name yourself:") || "Guest"); }
+        }
+    });
+
+    async function launch(name) {
+        userName = name;
+        document.getElementById('gate').style.display = 'none';
+        if(isAdmin) document.getElementById('admin-panel').style.display = 'block';
+        
+        const res = await fetch("/.netlify/functions/charles", { method: "POST", body: JSON.stringify({ isAdmin: isAdmin, isLogin: true, userName: userName }) });
+        const data = await res.json();
+        if(data.needsUpdate) document.getElementById('update-ui').style.display = 'block';
+        updateUI(data);
+        addMsg(data.reply, "ai");
+    }
+
+    // 3. CHAT LOGIC
+    document.getElementById('userInput').addEventListener('keypress', async (e) => {
+        if(e.key === 'Enter' && e.target.value) {
+            const val = e.target.value;
+            addMsg(val, "user");
+            e.target.value = "";
+            const res = await fetch("/.netlify/functions/charles", { method: "POST", body: JSON.stringify({ message: val, isAdmin: isAdmin, userName: userName }) });
+            const data = await res.json();
+            updateUI(data);
+            addMsg(data.reply, "ai");
+        }
+    });
+
+    function addMsg(text, role) {
+        const div = document.createElement('div');
+        div.className = 'msg';
+        div.innerHTML = `<b>${role.toUpperCase()}:</b><br>${text}`;
+        document.getElementById('messages').appendChild(div);
+        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+    }
+
+    function updateUI(data) {
+        if (data.mood) {
+            const disp = document.getElementById('mood-display');
+            disp.innerText = data.mood.name;
+            disp.style.color = data.mood.color;
+            document.documentElement.style.setProperty('--accent', data.mood.color);
+        }
+    }
+
+    async function grantUpdate() {
+        const res = await fetch("/.netlify/functions/charles", { method: "POST", body: JSON.stringify({ isAdmin: true, isUpdateGrant: true }) });
+        const data = await res.json();
+        addMsg(data.reply, "ai");
+        document.getElementById('update-ui').style.display = 'none';
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundle = true
+
+[[edge_functions]]
+  path = "/.netlify/functions/*"
+  function = "charles"
