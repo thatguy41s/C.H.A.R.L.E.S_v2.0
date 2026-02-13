@@ -9,3 +9,4 @@
 [[edge_functions]]
   path = "/.netlify/functions/*"
   function = "charles"
+  
