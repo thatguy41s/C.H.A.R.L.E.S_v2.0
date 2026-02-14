@@ -3,10 +3,9 @@
   functions = "netlify/functions"
 
 [functions]
-  # This tells Netlify to use the modern bundler without the invalid 'true' syntax
   node_bundler = "esbuild"
 
-[[edge_functions]]
-  path = "/.netlify/functions/*"
-  function = "charles"
-  
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200

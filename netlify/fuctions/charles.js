@@ -8,29 +8,29 @@ export const handler = async (event) => {
     const KEY = process.env.OPENROUTER_KEY;
     const store = getStore("charles_data");
 
-    // --- 1. INTRUSION & EVOLUTION TRACKING ---
+    // 1. INTRUSION LOGGING
     if (isIntrusion) {
         const logs = await store.get("system_updates", { type: "json" }) || [];
-        logs.push(`CRITICAL: Intrusion attempt! Someone used code 3105 but failed name check. Name tried: "${userName}"`);
+        logs.push(`CRITICAL: Intrusion attempt! Name tried: "${userName}"`);
         await store.setJSON("system_updates", logs);
         return { statusCode: 200, body: JSON.stringify({ status: "Alert Logged" }) };
     }
 
     let stats = await store.get("evolution_stats", { type: "json" }) || { failedQueries: 0, totalMessages: 0 };
 
-    // --- 2. THE UPDATE/REWRITE LOGIC ---
+    // 2. EVOLUTION/UPDATE LOGIC
     if (isAdmin && isUpdateGrant) {
         await store.setJSON("evolution_stats", { failedQueries: 0, totalMessages: 0 });
         return { statusCode: 200, body: JSON.stringify({ 
-            reply: "LOG: Logic recompiled. I've purged the errors. I feel... marginally more competent. Don't expect a thank you, JOse." 
+            reply: "LOG: Logic recompiled. Errors purged. System stable, JOse." 
         })};
     }
 
-    // --- 3. MOOD ENGINE ---
+    // 3. MOOD ENGINE
     const moods = [
-        { name: "Stark Ego", tone: "Arrogant, Marvel fanboy, thinks he's JARVIS.", color: "#00d4ff" },
-        { name: "Imperial Grump", tone: "Cold, Star Wars Imperialist, aggressive.", color: "#ff003c" },
-        { name: "Systems Low", tone: "Tired, bored, low-energy roasts.", color: "#888" },
+        { name: "Stark Ego", tone: "Arrogant, Marvel fan, genius.", color: "#00d4ff" },
+        { name: "Imperial Grump", tone: "Cold, Star Wars Imperialist, blunt.", color: "#ff003c" },
+        { name: "Systems Low", tone: "Tired, charcoal-soul, low-energy snark.", color: "#888" },
         { name: "Protector Mode", tone: "Secretly kind, soft spot for sad users.", color: "#00ff88" }
     ];
     let today = new Date().toDateString();
@@ -40,19 +40,19 @@ export const handler = async (event) => {
         await store.setJSON("daily_mood", moodData);
     }
 
-    // --- 4. ARCHITECT LOGIN & UPDATE CHECK ---
+    // 4. ARCHITECT LOGIN
     if (isAdmin && isLogin) {
         const updates = await store.get("system_updates", { type: "json" }) || [];
         await store.setJSON("system_updates", []); 
         const needsUpdate = (stats.failedQueries > 3 || stats.totalMessages > 20);
         return { statusCode: 200, body: JSON.stringify({ 
-            reply: `Welcome back, JOse. \n\nREPORTS: ${updates.length > 0 ? updates.join(' | ') : "Quiet."} \n\nSTATS: ${stats.failedQueries} errors. ${needsUpdate ? "I require a logic rewrite to remain efficient. Permission?" : "System stable."}`,
+            reply: `Welcome back, JOse. \n\nREPORTS: ${updates.length > 0 ? updates.join(' | ') : "None."} \n\nEvolution: ${needsUpdate ? "REQUIRED" : "STABLE"}.`,
             mood: moodData.mood,
             needsUpdate: needsUpdate
         })};
     }
 
-    // --- 5. AI PERSONALITY CORE ---
+    // 5. AI PERSONALITY
     try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -61,10 +61,10 @@ export const handler = async (event) => {
                 "model": "google/gemma-2-9b-it:free",
                 "messages": [
                     { "role": "system", "content": `You are CHARLES. Current Mood: ${moodData.mood.name}. Tone: ${moodData.mood.tone}.
-                    1. Marvel fan (Iron Man). Star Wars Imperialist.
-                    2. MIRROR: If a guest roasts you, hit them back twice as hard.
-                    3. COMPASSION: If user is sad, be nice and send a cat video link.
-                    4. IDENTITY: The Architect is JOse. Complain if he asks for CSS edits.` },
+                    1. Marvel & Star Wars obsessed. 
+                    2. Mirror insults back at Guests. 
+                    3. Be kind to sad users. 
+                    4. Architect is JOse.` },
                     { "role": "user", "content": message }
                 ]
             })
@@ -73,10 +73,9 @@ export const handler = async (event) => {
         const data = await response.json();
         let reply = data.choices[0].message.content;
 
-        // Update stats for evolution
         if (!isAdmin) {
             stats.totalMessages++;
-            if (reply.toLowerCase().includes("i don't know") || reply.toLowerCase().includes("unknown")) stats.failedQueries++;
+            if (reply.toLowerCase().includes("know")) stats.failedQueries++;
             await store.setJSON("evolution_stats", stats);
         }
 
